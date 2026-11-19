@@ -59,68 +59,107 @@ function base(radius) {
 }
 
 /* ================= Bohr atom ================= */
-const ELECTRON_COLORS = ['#38e1ff', '#7cf7c4', '#ffd166', '#ff7cd4'];
-export function atomModel(el, opts = {}) {
-  const shells = el.shells;
-  const R0 = 1.05, DR = 0.62;
-  const outer = R0 + (shells.length - 1) * DR;
-  const g = base(outer + 0.35);
-
-  // nucleus: protons (red) and neutrons (grey) packed in a ball
-  const n = el.z + el.neutrons;
-  const nr = 0.13, NR = nr * 1.25 * Math.cbrt(n);
-  const nuc = new THREE.Group();
-  const prot = new THREE.InstancedMesh(SPHERE(), std('#ff3b5c', 0.05, 0.25, { emissive: '#5a0010', ei: 0.6 }), el.z);
-  const neut = new THREE.InstancedMesh(SPHERE(), std('#b8c4d6', 0.15, 0.3, { emissive: '#101820', ei: 0.4 }), Math.max(1, el.neutrons));
-  neut.count = el.neutrons;
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(nr, nr, nr), pos = new THREE.Vector3();
-  let pi = 0, ni = 0;
-  const golden = Math.PI * (3 - Math.sqrt(5));
+// Drawn the way classroom tools (e.g. PhET "Build an Atom") show it: a magnified,
+// tightly packed nucleus you can count (red protons, grey neutrons) and flat
+// concentric shells facing the viewer, each labelled K, L, M, N with its electron count.
+const SHELL_NAMES = ['K', 'L', 'M', 'N'];
+const nucleusCache = new Map();
+function packNucleus(n, r, seed) {
+  const key = `${n}|${seed}`;
+  if (nucleusCache.has(key)) return nucleusCache.get(key);
+  const rnd = mulberry(seed);
+  const P = [];
   for (let i = 0; i < n; i++) {
-    const r = n === 1 ? 0 : NR * Math.cbrt((i + 0.5) / n);
-    const y = 1 - (i / Math.max(1, n - 1)) * 2, rr = Math.sqrt(1 - y * y), th = golden * i;
-    pos.set(Math.cos(th) * rr * r, y * r, Math.sin(th) * rr * r);
-    m4.compose(pos, q, sc);
-    const isProton = (pi < el.z) && (ni >= el.neutrons || (i % 2 === 0));
-    if (isProton) prot.setMatrixAt(pi++, m4); else neut.setMatrixAt(ni++, m4);
+    const v = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize().multiplyScalar(Math.cbrt(rnd()) * r * Math.cbrt(n) * 0.7);
+    P.push(n === 1 ? new THREE.Vector3() : v);
   }
-  nuc.add(prot); if (el.neutrons) nuc.add(neut);
-  nuc.add(glowSprite('#ff6a88', NR * 7 + 0.6, 0.55));
+  // relax: push overlapping nucleons apart, pull everything towards the centre
+  const min = r * 2 * 0.97, d = new THREE.Vector3();
+  for (let it = 0; it < 90; it++) {
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      d.subVectors(P[j], P[i]);
+      const len = d.length() || 1e-4;
+      if (len < min) { d.multiplyScalar((min - len) / len / 2); P[i].sub(d); P[j].add(d); }
+    }
+    for (const p of P) p.multiplyScalar(0.985);
+  }
+  nucleusCache.set(key, P);
+  return P;
+}
+
+export function atomModel(el) {
+  const light = themeState.light;
+  const shells = el.shells;
+  const n = el.z + el.neutrons;
+  const nr = 0.19;
+  const pts = packNucleus(n, nr, el.z * 7 + 3);
+  const NR = pts.reduce((m, p) => Math.max(m, p.length()), 0) + nr;
+  const R0 = Math.max(1.0, NR + 0.45), DR = 0.5;
+  const outer = R0 + (shells.length - 1) * DR;
+  const g = base(outer + 0.3);
+
+  // nucleus, protons and neutrons mixed evenly
+  const nuc = new THREE.Group();
+  const protonMat = new THREE.MeshPhysicalMaterial({ color: '#ef4444', roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.15, emissive: '#7f1d1d', emissiveIntensity: 0.25 });
+  const neutronMat = new THREE.MeshPhysicalMaterial({ color: light ? '#94a3b8' : '#a8b4c6', roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.15, emissive: '#1e293b', emissiveIntensity: 0.2 });
+  const prot = new THREE.InstancedMesh(SPHERE(), protonMat, el.z);
+  const neut = new THREE.InstancedMesh(SPHERE(), neutronMat, Math.max(1, el.neutrons));
+  neut.count = el.neutrons;
+  const order = pts.map((p, i) => i);
+  const rnd = mulberry(el.z * 13 + 1);
+  for (let i = order.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; [order[i], order[j]] = [order[j], order[i]]; }
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(nr, nr, nr);
+  order.forEach((idx, k) => {
+    m4.compose(pts[idx], q, sc);
+    if (k < el.z) prot.setMatrixAt(k, m4); else neut.setMatrixAt(k - el.z, m4);
+  });
+  nuc.add(prot);
+  if (el.neutrons) nuc.add(neut);
+  nuc.add(glowSprite(light ? '#fca5a5' : '#ff6a88', NR * 5.5 + 0.4, light ? 0.5 : 0.35));
   g.add(nuc);
 
-  // electron shells
-  const ringGeo = r => geo(`ring|${r}`, () => new THREE.TorusGeometry(r, 0.012, 8, 160));
-  const eGeo = geo('egeo', () => new THREE.SphereGeometry(0.075, 16, 12));
+  // shells: flat concentric rings in one plane, facing the viewer
+  const disc = new THREE.Group();
+  disc.rotation.x = -0.32;
+  g.add(disc);
+  const ringMat = new THREE.MeshBasicMaterial({ color: light ? '#64748b' : '#9fb6d8', transparent: true, opacity: light ? 0.55 : 0.5, depthWrite: false });
+  const bandMat = new THREE.MeshBasicMaterial({ color: light ? '#0ea5e9' : '#38bdf8', transparent: true, opacity: light ? 0.05 : 0.06, depthWrite: false, side: THREE.DoubleSide });
+  const eGeo = geo('egeo2', () => new THREE.SphereGeometry(0.095, 24, 16));
+  const eMat = new THREE.MeshPhysicalMaterial({ color: light ? '#0284c7' : '#38bdf8', roughness: 0.2, clearcoat: 1, emissive: light ? '#075985' : '#0ea5e9', emissiveIntensity: light ? 0.35 : 0.9 });
   const shellsGroup = [];
   shells.forEach((count, k) => {
     const r = R0 + k * DR;
-    const plane = new THREE.Group();
-    plane.rotation.set(Math.PI / 2 + (k % 2 ? 0.35 : -0.25) + k * 0.1, k * 0.7, k * 0.45);
-    const col = ELECTRON_COLORS[k % ELECTRON_COLORS.length];
-    plane.add(new THREE.Mesh(ringGeo(r), basic(col, 0.55)));
+    disc.add(new THREE.Mesh(geo(`ring2|${r}`, () => new THREE.TorusGeometry(r, 0.014, 8, 220)), ringMat));
+    disc.add(new THREE.Mesh(geo(`band|${r}`, () => new THREE.RingGeometry(r - DR * 0.22, r + DR * 0.22, 128)), bandMat));
     const es = [];
     for (let i = 0; i < count; i++) {
       const e = new THREE.Group();
-      e.add(new THREE.Mesh(eGeo, basic(themeState.light ? col : '#ffffff', 1, false)));
-      e.add(glowSprite(col, 0.55, 0.95));
-      plane.add(e);
-      es.push({ e, a: (i / count) * Math.PI * 2 });
+      e.add(new THREE.Mesh(eGeo, eMat));
+      e.add(glowSprite(light ? '#7dd3fc' : '#38bdf8', 0.5, light ? 0.6 : 0.8));
+      disc.add(e);
+      es.push({ e, a: (i / count) * Math.PI * 2 + k * 0.4 });
     }
-    g.add(plane);
-    shellsGroup.push({ plane, es, r, speed: 1.1 / (1 + k * 0.45) });
+    // shell label, e.g. "L · 8"
+    const lab = textSprite(`${SHELL_NAMES[k]} · ${count}`, light
+      ? { color: '#0f172a', bg: 'rgba(255,255,255,0.92)', border: 'rgba(100,116,139,0.55)', scale: 0.56 }
+      : { color: '#e2e8f0', bg: 'rgba(15,23,42,0.85)', border: 'rgba(148,163,184,0.55)', scale: 0.56 });
+    const la = -0.62 - k * 0.2;
+    lab.position.set(Math.cos(la) * r, Math.sin(la) * r, 0.05);
+    disc.add(lab);
+    shellsGroup.push({ es, r, speed: 0.9 / (1 + k * 0.5) });
   });
 
   let boost = 0;
+  g.userData.wobble = true; // the stage sways it gently instead of spinning it round
   g.userData.update = (t, dt) => {
     boost = Math.max(0, boost - dt * 1.5);
     const sp = 1 + boost * 5;
     for (const s of shellsGroup) {
       for (const o of s.es) { o.a += dt * s.speed * sp; o.e.position.set(Math.cos(o.a) * s.r, Math.sin(o.a) * s.r, 0); }
-      s.plane.rotation.z += dt * 0.08;
     }
-    nuc.rotation.y += dt * 0.4;
-    const pulse = 1 + Math.sin(t * 3) * 0.03 + boost * 0.15;
-    nuc.scale.setScalar(pulse);
+    nuc.rotation.y += dt * 0.35;
+    nuc.rotation.x = Math.sin(t * 0.5) * 0.2;
+    nuc.scale.setScalar(1 + Math.sin(t * 2.4) * 0.015 + boost * 0.12);
   };
   g.userData.poke = () => { boost = 1; };
   return g;

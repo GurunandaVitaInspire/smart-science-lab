@@ -523,3 +523,59 @@
   /* the question panel gets a little more presence on white */
   html:not(.dark) .qpanel, html:not(.dark) .lpanel, html:not(.dark) .xpanel { background: color-mix(in oklab, var(--card) 86%, transparent); box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 24px 48px -28px rgb(15 23 42 / 0.25); }
 }
+
+/* ---------- element lab: bigger 3D view, table + detail card on the right ---------- */
+@layer components {
+  .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+  .lab-view .stage-wrap { flex: 1; min-height: 0; }
+  .lab-side { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+  .lab-side .lab-table { flex: none; justify-content: flex-start; }
+  .ptile .z { font-size: 0.8cqi; top: 0.3cqi; left: 0.45cqi; }
+  .ptile .sym { margin-top: 0.55cqi; }
+
+  .lab-detail {
+    flex: 1; min-height: 0; display: grid; gap: clamp(10px, 1.6vmin, 18px);
+    grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tile main" "stats stats" "shells shells"; align-content: center;
+    padding: clamp(16px, 2.4vmin, 28px); border-radius: var(--r); background: var(--panel); border: 1px solid var(--border);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 24px 48px -28px rgb(15 23 42 / 0.3);
+  }
+  .lab-detail.pop { animation: holoIn 0.45s var(--ease); }
+  .ld-tile { grid-area: tile; position: relative; width: clamp(92px, 13vmin, 150px); aspect-ratio: 1; border-radius: 18px; border: 2px solid var(--c); display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(150deg, color-mix(in oklab, var(--c) 22%, var(--card)), var(--card)); box-shadow: 0 12px 28px -16px var(--c); }
+  .ld-tile .z { position: absolute; top: 8px; left: 10px; font-family: var(--font-mono); font-size: clamp(11px, 1.5vmin, 16px); color: var(--muted-foreground); }
+  .ld-tile .sym { font-weight: 600; letter-spacing: -0.04em; font-size: clamp(38px, 6vmin, 72px); line-height: 1; margin-top: 0.15em; }
+  .ld-tile .ms { font-family: var(--font-mono); font-size: clamp(10px, 1.4vmin, 15px); color: var(--muted-foreground); margin-top: 0.3em; }
+  .ld-main { grid-area: main; align-self: center; min-width: 0; }
+  .ld-cat { margin: 0; font-size: clamp(12px, 1.5vmin, 16px); font-weight: 500; color: var(--muted-foreground); }
+  .ld-name { margin: 0.1em 0 0.2em; font-weight: 500; letter-spacing: -0.03em; font-size: clamp(28px, 4.6vmin, 56px); line-height: 1; }
+  .ld-fact { margin: 0; color: var(--muted-foreground); font-size: clamp(13px, 1.8vmin, 20px); line-height: 1.4; }
+  .ld-stats { grid-area: stats; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .ld-stats div { display: flex; flex-direction: column; gap: 0.1em; padding: 0.65em 0.8em; border-radius: 14px; background: var(--soft); border: 1px solid var(--border); }
+  .ld-stats b { font-family: var(--font-mono); font-weight: 600; font-size: clamp(20px, 3vmin, 34px); }
+  .ld-stats b.p { color: #ef4444; }
+  .ld-stats b.n { color: #64748b; }
+  .ld-stats b.e { color: #0284c7; }
+  .dark .ld-stats b.n { color: #a8b4c6; }
+  .dark .ld-stats b.e { color: #38bdf8; }
+  .ld-stats span { color: var(--muted-foreground); font-size: clamp(11px, 1.4vmin, 15px); }
+  .ld-shells { grid-area: shells; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .ld-label { font-size: clamp(11px, 1.35vmin, 14px); font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-foreground); margin-right: 0.4em; }
+  .shell { display: inline-flex; align-items: center; gap: 0.5em; padding: 0.3em 0.85em 0.3em 0.35em; border-radius: 999px; border: 1px solid color-mix(in oklab, #0284c7 30%, var(--border)); background: color-mix(in oklab, #0284c7 7%, var(--card)); font-family: var(--font-mono); font-weight: 600; font-size: clamp(14px, 2vmin, 22px); }
+  .shell b { display: grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: #0284c7; color: #fff; font-size: 0.7em; }
+
+  .particle-key { position: absolute; top: 12px; right: 12px; display: none; flex-direction: column; gap: 6px; padding: 8px 12px; border-radius: 14px; background: var(--panel-strong); border: 1px solid var(--border); font-size: clamp(11px, 1.4vmin, 14px); color: var(--muted-foreground); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .atom-view .particle-key { display: flex; }
+  .particle-key span { display: flex; align-items: center; gap: 0.5em; }
+  .pk { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 50%; box-shadow: inset -2px -2px 3px rgb(0 0 0 / 0.25), inset 2px 2px 3px rgb(255 255 255 / 0.4); }
+  .pk.proton { background: #ef4444; }
+  .pk.neutron { background: #94a3b8; }
+  .pk.electron { background: #0284c7; }
+  .atom-view .stage-hint { left: 14px; transform: none; }
+
+  @media (max-aspect-ratio: 4/5), (max-width: 760px) {
+    .lab { grid-template-columns: 1fr; }
+    .lab-detail { grid-template-areas: "tile main" "stats stats" "shells shells"; }
+    .ld-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ld-tile { width: 84px; }
+  }
+}

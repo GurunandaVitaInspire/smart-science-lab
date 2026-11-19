@@ -262,7 +262,13 @@ export class Stage {
     const r = this.rot;
     if (!r.drag) {
       r.vy *= 0.94; r.vx *= 0.9;
-      r.y += r.vy + dt * (this.opts.autoRotate ?? 0.35);
+      if (this.model?.userData.wobble) {
+        // keep flat models (Bohr atoms) readable: sway gently, ease back after a drag
+        if (Math.abs(r.vy) < 0.002) r.y = Math.atan2(Math.sin(r.y), Math.cos(r.y));
+        r.y += r.vy + (Math.sin(t * 0.45) * 0.5 - r.y) * 0.02;
+      } else {
+        r.y += r.vy + dt * (this.opts.autoRotate ?? 0.35);
+      }
       r.x += (0 - r.x) * 0.02;
     }
     this.root.rotation.x += (r.tx - this.root.rotation.x) * 0.08;

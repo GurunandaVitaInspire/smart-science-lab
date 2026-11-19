@@ -1,0 +1,10 @@
+{
+  "name": "Smart Science Lab · Atoms & Molecules",
+  "short_name": "Science Lab",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#070a1f",
+  "theme_color": "#070a1f",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

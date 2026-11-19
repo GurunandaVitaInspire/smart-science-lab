@@ -579,3 +579,9 @@
     .ld-tile { width: 84px; }
   }
 }
+
+/* element lab: details on top, periodic table at the bottom (easy to reach on a classroom board) */
+@layer components {
+  .lab-detail { align-content: start; }
+  .lab-side .lab-table { margin-top: auto; }
+}

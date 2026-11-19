@@ -26,11 +26,11 @@ export function mountLab(body) {
       </div>
     </div>
     <div class="lab-side">
+      <div class="lab-detail"></div>
       <div class="lab-table">
         <div class="ptable"></div>
         <div class="legend">${Object.entries(CATS).map(([, c]) => `<span style="--c:${c.color}">${c.label}</span>`).join('')}</div>
       </div>
-      <div class="lab-detail"></div>
     </div>
   </div>`);
   body.appendChild(root);

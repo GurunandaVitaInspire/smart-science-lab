@@ -55,11 +55,11 @@ function Home({ games, images, onPlay }: HomeProps) {
       }}
       action={
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <button type="button" onClick={() => onPlay("elements")} className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background shadow-sm outline-none transition-[translate,box-shadow] hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+          <button type="button" data-tour="start" onClick={() => onPlay("elements")} className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background shadow-sm outline-none transition-[translate,box-shadow] hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <Play className="size-4" aria-hidden="true" />
             Start with elements
           </button>
-          <button type="button" onClick={() => onPlay("lab")} className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground shadow-sm outline-none backdrop-blur transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+          <button type="button" data-tour="lab" onClick={() => onPlay("lab")} className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground shadow-sm outline-none backdrop-blur transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
             <Microscope className="size-4" aria-hidden="true" />
             Element Lab
           </button>

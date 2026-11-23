@@ -39,6 +39,11 @@ The home page is a conveyor belt (the `SushiConveyorMenu` component from 21st.de
 
 The sun/moon button switches between dark and light themes, and the choice is remembered.
 
+## Guided tour with Ravi
+On a first visit, Ravi (the lab buddy) rolls onto the home page and walks the students through it: the game belt, the ring colours, the five games, the Element Lab, the no-points retry rule and the controls. A spotlight frames each part, a dotted arrow links his speech bubble to it, and he points at it while he talks (spoken aloud when the voice is on). **Skip tour** works at any time, the **Guide** button in the top bar replays it, and the browser remembers when it has been seen.
+
+Ravi is drawn entirely in SVG code (`src/tour/ravi.js`) as a jointed puppet: hips, knees, ankles, shoulders, elbows, wrists and neck all turn on their real joints, so he can wave, point at any spot on the screen, hop, roll in, blink, talk and look around (`src/tour/mascot.js`, animated with GSAP). The tour steps are in `src/tour/steps.js`.
+
 ## Tech
 - Vite + plain JavaScript for the games, and [Three.js](https://threejs.org) for all 3D: one WebGL canvas draws the space background and every 3D stage.
 - React 19 + TypeScript + Tailwind CSS v4 with the shadcn/ui structure (`components.json`, `src/components/ui`, `src/lib/utils.ts`, theme tokens in `src/index.css`) for the home belt. React only loads on the home page.

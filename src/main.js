@@ -15,6 +15,8 @@ import { mountQuiz } from './games/quiz.js';
 import { mountLatin } from './games/latin.js';
 import { mountCross } from './games/cross.js';
 import { mountLab } from './games/lab.js';
+import { startTour, tourDone, tourRunning } from './tour/tour.js';
+import { HOME_TOUR } from './tour/steps.js';
 
 const app = document.getElementById('app');
 initEngine(document.getElementById('gl'));
@@ -48,6 +50,7 @@ function homeScreen() {
   const el = h(`<section class="screen home">
     <header class="topbar">
       ${brand()}
+      <button class="guide-btn" type="button" title="Take the guided tour"><img src="/mascot/ravi-head.webp" alt=""><span>Guide</span></button>
       <div class="stat-pills"><span class="pill">${icon('star')} ${totalStars()}</span><span class="pill">${icon('zap')} ${totalXp()} XP</span></div>
     </header>
     <div class="home-belt"><div class="belt-loading">Setting the plates…</div></div>
@@ -55,6 +58,7 @@ function homeScreen() {
     <footer class="home-foot">ZPHS, Gurajanapalli · Physical Science · V. V. Ramana Murthy</footer>
   </section>`);
   el.querySelector('.topbar').appendChild(soundButtons());
+  el.querySelector('.guide-btn').addEventListener('click', () => { audio.start(); startTour(HOME_TOUR); });
 
   // progress strip under the belt
   el.querySelector('.home-stats').innerHTML = GAMES.map(g => {
@@ -82,6 +86,8 @@ function homeScreen() {
     const host = el.querySelector('.home-belt');
     host.innerHTML = '';
     unmount = mod.mountHome(host, { games, images, onPlay: id => { audio.start(); openGame(id); } });
+    // first visit: Ravi shows the students around (skippable)
+    if (!tourDone() && !location.hash) setTimeout(() => { if (alive) startTour(HOME_TOUR); }, 900);
   });
   return { el, destroy() { alive = false; unmount?.(); } };
 }
@@ -238,7 +244,7 @@ function labScreen() {
 let greeted = false;
 const unlock = () => {
   audio.start();
-  if (!greeted) { greeted = true; setTimeout(() => audio.say('Welcome to Smart Science Lab! Pick a game from the belt.'), 300); }
+  if (!greeted) { greeted = true; setTimeout(() => { if (!tourRunning() && tourDone()) audio.say('Welcome to Smart Science Lab! Pick a game from the belt.'); }, 300); }
 };
 document.addEventListener('pointerdown', unlock, { once: true, capture: true });
 document.addEventListener('keydown', unlock, { once: true, capture: true });

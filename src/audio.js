@@ -248,20 +248,26 @@ class AudioEngine {
     const score = v => (/en-IN/i.test(v.lang) ? 4 : 0) + (/en-(GB|US)/i.test(v.lang) ? 2 : 0) + (/female|zira|heera|samantha|google/i.test(v.name) ? 1 : 0) + (/^en/i.test(v.lang) ? 1 : 0);
     this.voice = vs.slice().sort((a, b) => score(b) - score(a))[0];
   }
-  say(text) {
+  /** Speak a line. Returns false when no voice will play (voice off, no support, audio not unlocked yet). */
+  say(text, { onend, rate = 1.02, pitch = 1.25 } = {}) {
     const ss = window.speechSynthesis;
-    if (!this.voiceOn || !ss || !this.ctx) return;
+    if (!this.voiceOn || !ss || !this.ctx) return false;
     try {
       ss.cancel();
       const u = new SpeechSynthesisUtterance(text);
       if (this.voice) u.voice = this.voice;
-      u.rate = 1.02; u.pitch = 1.25; u.volume = 1;
+      u.rate = rate; u.pitch = pitch; u.volume = 1;
       const g = this.music.gain, now = this.ctx.currentTime;
       if (this.timer) { g.cancelScheduledValues(now); g.setTargetAtTime(0.14, now, 0.1); }
-      u.onend = u.onerror = () => { if (this.timer && this.ctx) { g.cancelScheduledValues(this.ctx.currentTime); g.setTargetAtTime(0.34, this.ctx.currentTime, 0.4); } };
+      u.onend = u.onerror = () => {
+        if (this.timer && this.ctx) { g.cancelScheduledValues(this.ctx.currentTime); g.setTargetAtTime(0.34, this.ctx.currentTime, 0.4); }
+        onend?.();
+      };
       ss.speak(u);
-    } catch { /* no voice on this device */ }
+      return true;
+    } catch { return false; }
   }
+  hush() { try { window.speechSynthesis?.cancel(); } catch { /* ignore */ } }
 
   /* ---------- toggles ---------- */
   toggleMusic() {

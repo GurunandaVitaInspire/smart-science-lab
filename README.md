@@ -53,7 +53,32 @@ BHASHINI_API_KEY=...
 BHASHINI_PIPELINE_ID=64392f96daac500b55c543cd   # optional
 ```
 
-Put them in Vercel → Project → Settings → Environment Variables (and redeploy), or in `.env.local` for `npm run dev` (see `.env.example`). The serverless functions in `api/` (`eleven.js`, `bhashini.js`, `status.js`) call ElevenLabs and Bhashini, so keys never reach the page; in dev, Vite runs the same functions.
+Put them in Vercel (steps below), or in `.env.local` when running on your own computer. The serverless functions in `api/` (`eleven.js`, `bhashini.js`, `status.js`) call ElevenLabs and Bhashini, so the keys never reach the page.
+
+### Adding the keys in Vercel (step by step)
+1. Get the keys:
+   - **ElevenLabs:** sign in at elevenlabs.io → your profile → **API Keys** → *Create API key*. Copy it.
+   - **Bhashini:** sign in at bhashini.gov.in → **My Profile** → note the **User ID**, then generate a **ULCA API key**. Copy both.
+2. Open vercel.com → your **smart-science-lab** project → **Settings** → **Environment Variables**.
+3. Add each variable: type the **Key** (for example `ELEVENLABS_API_KEY`), paste the **Value**, tick **Production**, **Preview** and **Development**, and click **Save**. Repeat for:
+
+   | Key | Value |
+   |---|---|
+   | `ELEVENLABS_API_KEY` | your ElevenLabs API key |
+   | `BHASHINI_USER_ID` | your Bhashini user ID |
+   | `BHASHINI_API_KEY` | your Bhashini ULCA API key |
+   | `BHASHINI_PIPELINE_ID` | optional, leave out to use `64392f96daac500b55c543cd` |
+
+   You can add only ElevenLabs, only Bhashini, or both.
+4. Go to **Deployments**, open the menu (⋯) on the latest deployment and click **Redeploy**. New variables only reach a new deployment.
+5. Check it: open the site → gear button (**Settings**). ElevenLabs and Bhashini should show **Ready (server key)** instead of *Not set up*. Switch to తెలుగు and press **Test the voice**.
+
+With the CLI instead: `npx vercel env add ELEVENLABS_API_KEY` (it asks for the value and the environments), then `npx vercel --prod`.
+
+### Keys on your own computer (npm run dev)
+Copy `.env.example` to `.env.local`, fill in the values and restart `npm run dev`; Vite runs the same `api/` functions locally.
+
+**Never commit real keys.** `.env`, `.env.local` and every other `.env.*` file are in `.gitignore`; only the empty `.env.example` template is in the repository. If a key is ever pushed by mistake, delete it in ElevenLabs / Bhashini and create a new one.
 
 ## Run locally
 ```bash

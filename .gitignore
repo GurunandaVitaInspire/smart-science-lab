@@ -2,4 +2,7 @@ node_modules
 dist
 .vercel
 .claude
-.env*.local
+# secrets: never commit real keys (the empty template is fine)
+.env
+.env.*
+!.env.example

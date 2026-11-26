@@ -1,5 +1,7 @@
 // Music, sound effects and voice cheers, all made live with the Web Audio API
-// (no audio files to download, works offline).
+// (no audio files to download, works offline). Speech goes through speech.js.
+import * as speech from './speech.js';
+import { t } from './i18n.js';
 
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const store = {
@@ -58,9 +60,7 @@ class AudioEngine {
       this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      this.pickVoice();
-      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => this.pickVoice();
-    } catch (e) { this.ctx = null; return false; }
+      } catch (e) { this.ctx = null; return false; }
     return true;
   }
 
@@ -241,33 +241,19 @@ class AudioEngine {
     for (let i = 0; i < 18; i++) this.osc('sine', mtof(96 + ((Math.random() * 16) | 0)), t + 1 + i * 0.05, 0.2, 0.04, this.sfx);
   }
 
-  /* ---------- voice cheers ---------- */
-  pickVoice() {
-    const ss = window.speechSynthesis; if (!ss) return;
-    const vs = ss.getVoices(); if (!vs.length) return;
-    const score = v => (/en-IN/i.test(v.lang) ? 4 : 0) + (/en-(GB|US)/i.test(v.lang) ? 2 : 0) + (/female|zira|heera|samantha|google/i.test(v.name) ? 1 : 0) + (/^en/i.test(v.lang) ? 1 : 0);
-    this.voice = vs.slice().sort((a, b) => score(b) - score(a))[0];
+  /* ---------- voice (spoken through the speech service, in the chosen language) ---------- */
+  say(text, { onend } = {}) {
+    if (!this.voiceOn) { onend?.(); return false; }
+    speech.say(t(text), { onend });
+    return true;
   }
-  /** Speak a line. Returns false when no voice will play (voice off, no support, audio not unlocked yet). */
-  say(text, { onend, rate = 1.02, pitch = 1.25 } = {}) {
-    const ss = window.speechSynthesis;
-    if (!this.voiceOn || !ss || !this.ctx) return false;
-    try {
-      ss.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      if (this.voice) u.voice = this.voice;
-      u.rate = rate; u.pitch = pitch; u.volume = 1;
-      const g = this.music.gain, now = this.ctx.currentTime;
-      if (this.timer) { g.cancelScheduledValues(now); g.setTargetAtTime(0.14, now, 0.1); }
-      u.onend = u.onerror = () => {
-        if (this.timer && this.ctx) { g.cancelScheduledValues(this.ctx.currentTime); g.setTargetAtTime(0.34, this.ctx.currentTime, 0.4); }
-        onend?.();
-      };
-      ss.speak(u);
-      return true;
-    } catch { return false; }
+  hush() { speech.stop(); }
+  duck(on) {
+    if (!this.ctx || !this.timer) return;
+    const g = this.music.gain, now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setTargetAtTime(on ? 0.12 : 0.34, now, on ? 0.1 : 0.4);
   }
-  hush() { try { window.speechSynthesis?.cancel(); } catch { /* ignore */ } }
 
   /* ---------- toggles ---------- */
   toggleMusic() {
@@ -278,7 +264,7 @@ class AudioEngine {
   toggleSfx() { this.sfxOn = !this.sfxOn; store.set('sfx', this.sfxOn); return this.sfxOn; }
   toggleVoice() {
     this.voiceOn = !this.voiceOn; store.set('voice', this.voiceOn);
-    if (!this.voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
+    speech.setVoiceEnabled(this.voiceOn);
     return this.voiceOn;
   }
   pause() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); }
@@ -286,6 +272,10 @@ class AudioEngine {
 }
 
 export const audio = new AudioEngine();
+speech.setVoiceEnabled(audio.voiceOn);
+speech.onSpeakChange(on => audio.duck(on));
+// voices load late in some browsers
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
 
 const pick = a => a[(Math.random() * a.length) | 0];
 export const CHEERS = ['Awesome!', 'Brilliant!', 'Super!', 'Excellent!', 'You got it!', 'Fantastic!', 'Great job!', 'Wow, correct!', 'Perfect!', 'Superb!'];

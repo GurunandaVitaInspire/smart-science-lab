@@ -7,6 +7,11 @@ import { banner } from '../fx.js';
 import { Stage } from '../three/engine.js';
 import { compoundModel } from '../three/models.js';
 import { IONS } from '../data/questions.js';
+import { t } from '../i18n.js';
+import { narrate, hush, sayFormula } from '../narrate.js';
+
+const plain = html => String(html).replace(/<[^>]+>/g, '');
+const compound = (c, a) => `${t(c.n)} ${t(a.n.toLowerCase())}`;
 
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 const other = k => (k === 'cat' ? 'an' : 'cat');
@@ -22,16 +27,16 @@ export function mountCross(body, { items, session, onDone }) {
   const root = h(`<div class="cross">
     <div class="stage-wrap">
       <div class="stage"></div>
-      <div class="stage-hint">Drag to spin · tap to poke</div>
+      <div class="stage-hint">${t('Drag to spin · tap to poke')}</div>
     </div>
     <div class="xpanel glass">
-      <div class="qmeta"><span class="kind-chip">Criss-Cross</span><span class="qnum"></span></div>
+      <div class="qmeta"><span class="kind-chip">${t('Criss-Cross')}</span><span class="qnum"></span></div>
       <h2 class="qtext"></h2>
       <div class="xboard">
         <svg class="xar" aria-hidden="true"></svg>
         <div class="xrow">
-          <div class="xion cat tilt" data-tilt-max="8"><div class="xsym"></div><div class="xnm"></div><div class="xvh"><span class="xvl">Valency</span><span class="xhold"></span></div></div>
-          <div class="xion an tilt" data-tilt-max="8"><div class="xsym"></div><div class="xnm"></div><div class="xvh"><span class="xvl">Valency</span><span class="xhold"></span></div></div>
+          <div class="xion cat tilt" data-tilt-max="8"><div class="xsym"></div><div class="xnm"></div><div class="xvh"><span class="xvl">${t('Valency')}</span><span class="xhold"></span></div></div>
+          <div class="xion an tilt" data-tilt-max="8"><div class="xsym"></div><div class="xnm"></div><div class="xvh"><span class="xvl">${t('Valency')}</span><span class="xhold"></span></div></div>
         </div>
         <div class="xform">
           <div class="xf cat"><span class="xp"></span><button class="xslot" data-s="cat" aria-label="Number after the cation">?</button></div>
@@ -39,9 +44,9 @@ export function mountCross(body, { items, session, onDone }) {
         </div>
       </div>
       <div class="xacts" hidden>
-        <button class="xa tilt" data-a="br"><b>( )</b> Add brackets</button>
-        <button class="xa tilt" data-a="cut"><b>÷</b> Cut down</button>
-        <button class="xa tilt" data-a="ok"><b>✓</b> Formula ready</button>
+        <button class="xa tilt" data-a="br"><b>( )</b> ${t('Add brackets')}</button>
+        <button class="xa tilt" data-a="cut"><b>÷</b> ${t('Cut down')}</button>
+        <button class="xa tilt" data-a="ok"><b>✓</b> ${t('Formula ready')}</button>
       </div>
       <div class="feedback" hidden></div>
     </div>
@@ -54,12 +59,13 @@ export function mountCross(body, { items, session, onDone }) {
   const stage = new Stage(qs('.stage'), { autoRotate: 0.15 });
   let idx = -1, cur = null, S = null, sel = null, live = null, nextCtl = null;
 
-  const say = (kind, html) => { UI.fb.hidden = false; UI.fb.className = 'feedback ' + kind; UI.fb.innerHTML = `<div class="fb-text"><div class="fb-head">${html}</div></div>`; };
-  function wrong(html, hintEl) {
-    if (!S.wrong) session.wrong(null, { line: 'Oops! Look at the hint and try again.' });
+  // every message is shown and read aloud (formulas are spelt out)
+  const say = (kind, html, spoken) => { UI.fb.hidden = false; UI.fb.className = 'feedback ' + kind; UI.fb.innerHTML = `<div class="fb-text"><div class="fb-head">${html}</div></div>`; narrate(spoken ?? plain(html)); };
+  function wrong(html, hintEl, spoken) {
+    if (!S.wrong) session.wrong(null, { quiet: true });
     else audio.wrong();
     S.wrong = true;
-    say('bad', icon('x') + ' ' + html);
+    say('bad', icon('x') + ' ' + html, spoken);
     qa('.reveal').forEach(x => x.classList.remove('reveal'));
     hintEl?.classList.add('reveal');
   }
@@ -79,19 +85,22 @@ export function mountCross(body, { items, session, onDone }) {
     S = { placed: { cat: false, an: false }, n: { cat: 0, an: 0 }, br: false, cut: false, done: false, wrong: false };
     sel = null; live = null;
     audio.whoosh();
-    qs('.qnum').textContent = `Formula ${idx + 1} of ${items.length}`;
-    qs('.qtext').innerHTML = `Make the formula of <b>${cur.cat.n} ${cur.an.n.toLowerCase()}</b>`;
+    qs('.qnum').textContent = t('Formula {n} of {total}', { n: idx + 1, total: items.length });
+    qs('.qtext').innerHTML = t('Make the formula of {name}', { name: `<b>${compound(cur.cat, cur.an)}</b>` });
     for (const k of ['cat', 'an']) {
       const ion = cur[k];
       SD[k].sym.innerHTML = F(ion.s + '^' + ion.c);
-      SD[k].nm.textContent = ion.n + ' ion';
+      SD[k].nm.textContent = t(ion.n + ' ion');
       SD[k].hold.innerHTML = `<button class="vchip" data-k="${k}">${ion.v}</button>`;
       SD[k].slot.disabled = false;
     }
     UI.acts.hidden = true;
     qa('.xa').forEach(b => { b.disabled = false; b.classList.remove('ok', 'reveal'); });
     render(); wire();
-    say('', cur.guide ? 'Drag each valency number along its glowing arrow to the <b>other</b> ion. (Or tap a number, then tap a box.)' : 'Drag each valency across to the other ion (criss-cross).');
+    const intro = t('Make the formula of {name}', { name: compound(cur.cat, cur.an) }) + '. ' +
+      t('{ion} has valency {v}.', { ion: sayFormula(cur.cat.s + '^' + cur.cat.c), v: cur.cat.v }) + ' ' + t('{ion} has valency {v}.', { ion: sayFormula(cur.an.s + '^' + cur.an.c), v: cur.an.v }) + ' ';
+    const tip = cur.guide ? t('Drag each valency number along its glowing arrow to the other ion. (Or tap a number, then tap a box.)') : t('Drag each valency across to the other ion (criss-cross).');
+    say('', tip, intro + tip);
     showStage(1, 1, false);
     requestAnimationFrame(arrows); setTimeout(arrows, 150);
   }
@@ -153,13 +162,13 @@ export function mountCross(body, { items, session, onDone }) {
       if (S.placed.cat && S.placed.an) {
         UI.acts.hidden = false;
         showStage(S.n.cat, S.n.an, false);
-        say('', 'Good crossing. Now: add brackets, cut down, or is the formula ready?');
+        say('', t('Good crossing. Now: add brackets, cut down, or is the formula ready?'));
         requestAnimationFrame(arrows);
-      } else say('good', `${icon('check')} ${cur[k].v} goes under ${F(cur[other(k)].s)}. Now the other one!`);
+      } else say('good', `${icon('check')} ${t('{v} goes under {ion}. Now the other one!', { v: cur[k].v, ion: F(cur[other(k)].s) })}`, t('{v} goes under {ion}. Now the other one!', { v: cur[k].v, ion: sayFormula(cur[other(k)].s) }));
     } else {
       back(chip); chip.classList.remove('sel'); if (sel === chip) sel = null;
       slot.classList.add('bad'); setTimeout(() => slot.classList.remove('bad'), 450);
-      wrong(`Cross over! The valency of ${F(cur[k].s)} goes under <b>${F(cur[other(k)].s)}</b> (the glowing box).`, SD[other(k)].slot);
+      wrong(t('Cross over! The valency of {a} goes under {b} (the glowing box).', { a: F(cur[k].s), b: `<b>${F(cur[other(k)].s)}</b>` }), SD[other(k)].slot, t('Cross over! The valency of {a} goes under {b} (the glowing box).', { a: sayFormula(cur[k].s), b: sayFormula(cur[other(k)].s) }));
     }
     live = null; arrows();
   }
@@ -167,7 +176,7 @@ export function mountCross(body, { items, session, onDone }) {
     audio.tap();
     if (sel === chip) { chip.classList.remove('sel'); sel = null; return; }
     sel?.classList.remove('sel'); sel = chip; chip.classList.add('sel');
-    say('', 'Now tap the box where this number goes.');
+    say('', t('Now tap the box where this number goes.'));
   }
   function wire() {
     qa('.xhold .vchip').forEach(chip => {
@@ -190,7 +199,7 @@ export function mountCross(body, { items, session, onDone }) {
   }
   qa('.xslot').forEach(s => s.addEventListener('click', () => {
     if (s.disabled) return;
-    if (sel) place(sel, s); else say('', 'Pick a valency number first, then tap this box.');
+    if (sel) place(sel, s); else say('', t('Pick a valency number first, then tap this box.'));
   }));
 
   const needCut = () => !S.cut && S.n.cat === S.n.an && S.n.cat > 1;
@@ -203,29 +212,30 @@ export function mountCross(body, { items, session, onDone }) {
     const act = b.dataset.a;
     audio.tap();
     if (act === 'br') {
-      if (needCut()) return wrong('First cut down: both numbers are the same.', actBtn('cut'));
-      if (!needBr()) return wrong(S.br ? 'Brackets are already added.' : 'No brackets needed. Brackets are only for a <b>group of atoms</b> taken 2 or 3 times.', actBtn(rightAct()));
+      if (needCut()) return wrong(t('First cut down: both numbers are the same.'), actBtn('cut'));
+      if (!needBr()) return wrong(S.br ? t('Brackets are already added.') : t('No brackets needed. Brackets are only for a group of atoms taken 2 or 3 times.'), actBtn(rightAct()));
       S.br = true; b.disabled = true; b.classList.add('ok'); b.classList.remove('reveal'); audio.pop(); render();
-      say('good', `${icon('check')} Brackets added around the group. Anything more?`);
+      say('good', `${icon('check')} ${t('Brackets added around the group. Anything more?')}`);
     } else if (act === 'cut') {
-      if (!needCut()) return wrong(S.cut ? 'Already cut down.' : 'Cannot cut down. Cut down only when both numbers are the same, like 2 and 2.', actBtn(rightAct()));
+      if (!needCut()) return wrong(S.cut ? t('Already cut down.') : t('Cannot cut down. Cut down only when both numbers are the same, like 2 and 2.'), actBtn(rightAct()));
       const g = gcd(S.n.cat, S.n.an); S.n.cat /= g; S.n.an /= g; S.cut = true;
       b.disabled = true; b.classList.add('ok'); b.classList.remove('reveal'); audio.pop(); render();
       showStage(S.n.cat, S.n.an, false);
-      say('good', `${icon('check')} ${g} : ${g} becomes 1 : 1. Anything more?`);
+      say('good', `${icon('check')} ${t('{g} : {g} becomes 1 : 1. Anything more?', { g })}`);
     } else {
-      if (needCut()) return wrong('Not ready. Both numbers are the same, so cut down first.', actBtn('cut'));
-      if (needBr()) return wrong('Not ready. A group of atoms is taken more than once, so it needs brackets.', actBtn('br'));
+      if (needCut()) return wrong(t('Not ready. Both numbers are the same, so cut down first.'), actBtn('cut'));
+      if (needBr()) return wrong(t('Not ready. A group of atoms is taken more than once, so it needs brackets.'), actBtn('br'));
       S.done = true; render(); qa('.xa').forEach(x => { x.disabled = true; x.classList.remove('reveal'); }); b.classList.add('ok'); arrows();
       const fm = formulaOf(cur.cat, cur.an);
       showStage(fm.nc, fm.na, true);
-      const name = `${cur.cat.n.toLowerCase()} ${cur.an.n.toLowerCase()}`;
+      const name = compound(cur.cat, cur.an);
       let head;
-      if (!S.wrong) { const pts = session.correct(qs('.xform')); head = `${icon('check')} Correct. <b class="big-f">${F(fm.text)}</b> is ${name}. <span class="pts">+${pts}</span>`; banner(F(fm.text), name, 'formula'); }
-      else { session.learned(qs('.xform')); head = `${icon('sparkles')} You fixed it. <b class="big-f">${F(fm.text)}</b> is ${name}. No points this time.`; }
+      if (!S.wrong) { const pts = session.correct(qs('.xform'), { quiet: true }); head = `${icon('check')} ${t('Correct.')} ${t('{f} is {name}.', { f: `<b class="big-f">${F(fm.text)}</b>`, name })} <span class="pts">+${pts}</span>`; banner(F(fm.text), name, 'formula'); }
+      else { session.learned(qs('.xform'), { quiet: true }); head = `${icon('sparkles')} ${t('You fixed it.')} ${t('{f} is {name}.', { f: `<b class="big-f">${F(fm.text)}</b>`, name })} ${t('No points this time.')}`; }
+      narrate(`${S.wrong ? t('You fixed it.') : t('Correct.')} ${t('{f} is {name}.', { f: sayFormula(fm.text), name })} ${t('Rule')}: ${t(cur.rule)}. ${t('The number 1 is not written.')}`);
       UI.fb.hidden = false; UI.fb.className = 'feedback ' + (S.wrong ? 'learn' : 'good');
-      UI.fb.innerHTML = `<div class="fb-text"><div class="fb-head">${head}</div><div class="fb-why">Rule: ${cur.rule}. The number 1 is not written.</div></div><button class="next-btn">${idx + 1 >= items.length ? 'Finish' : 'Next'} ${icon('next')}</button>`;
-      nextCtl = autoNext(UI.fb.querySelector('.next-btn'), S.wrong ? 6000 : 4500, () => { session.step(); next(); });
+      UI.fb.innerHTML = `<div class="fb-text"><div class="fb-head">${head}</div><div class="fb-why">${t('Rule')}: ${t(cur.rule)}. ${t('The number 1 is not written.')}</div></div><button class="next-btn">${idx + 1 >= items.length ? t('Finish') : t('Next')} ${icon('next')}</button>`;
+      nextCtl = autoNext(UI.fb.querySelector('.next-btn'), S.wrong ? 9000 : 8000, () => { hush(); session.step(); next(); });
     }
   }));
 
@@ -234,5 +244,5 @@ export function mountCross(body, { items, session, onDone }) {
   const onResize = () => requestAnimationFrame(arrows);
   addEventListener('resize', onResize);
   next();
-  return { destroy() { nextCtl?.cancel(); stage.dispose(); ro?.disconnect(); removeEventListener('resize', onResize); } };
+  return { destroy() { nextCtl?.cancel(); hush(); stage.dispose(); ro?.disconnect(); removeEventListener('resize', onResize); } };
 }

@@ -1,6 +1,7 @@
 // Score, streak and all the "reactions" (sound, voice, particles, banners)
 // shared by every game.
 import { audio, cheer, streakCheer, wrongLine, learnLine } from '../audio.js';
+import { t } from '../i18n.js';
 import { burst, floatText, banner, flash, rain, centerOf, shake } from '../fx.js';
 import { pulse, setWarp } from '../three/engine.js';
 
@@ -45,10 +46,10 @@ export class Session {
     const milestone = this.streak === 3 || this.streak === 5 || (this.streak >= 10 && this.streak % 5 === 0);
     if (milestone) {
       audio.streak();
-      banner(`${this.streak} in a row`, this.streak >= 5 ? 'Unstoppable · +10 bonus each' : 'On fire · +5 bonus each');
+      banner(t('{n} in a row', { n: this.streak }), this.streak >= 5 ? t('Unstoppable · +10 bonus each') : t('On fire · +5 bonus each'));
       rain(120);
       setWarp(1.5);
-      audio.say(streakCheer());
+      if (!opts.quiet) audio.say(streakCheer());
     } else {
       audio.correct();
       if (!opts.quiet) audio.say(cheer());
@@ -61,7 +62,7 @@ export class Session {
 
   /** Wrong answer: no points, streak lost, show the right answer. */
   wrong(el, opts = {}) {
-    if (this.streak >= 3) banner('Streak lost', 'Keep going, you can do it!', 'soft');
+    if (this.streak >= 3) banner(t('Streak lost'), t('Keep going, you can do it!'), 'soft');
     this.streak = 0;
     audio.setIntensity(0);
     audio.wrong();
@@ -72,10 +73,10 @@ export class Session {
   }
 
   /** The child fixed the answer after seeing it: encourage, no points. */
-  learned(el) {
+  learned(el, opts = {}) {
     audio.learn();
     if (el) { const [x, y] = centerOf(el); burst(x, y, { count: 16, speed: 5, colors: ['#93c5fd', '#c4b5fd', '#ffffff'] }); }
-    audio.say(learnLine());
+    if (!opts.quiet) audio.say(learnLine());
   }
 
   step() { this.done++; this.render(); }

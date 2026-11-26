@@ -5,6 +5,8 @@ import { gsap } from 'gsap';
 import { createMascot } from './mascot.js';
 import { audio } from '../audio.js';
 import { icon } from '../icons.js';
+import { t } from '../i18n.js';
+import { readAloud } from '../narrate.js';
 
 const KEY = 'ssl.tour.v1';
 if (import.meta.env.DEV) window.__gsap = gsap; // dev only: lets tests control the animation clock
@@ -26,13 +28,13 @@ export function startTour(steps, { onClose } = {}) {
     <div class="tour-spot"></div>
     <svg class="tour-arrow" aria-hidden="true"><path class="ta-line"/><path class="ta-head"/></svg>
     <div class="tour-bubble" aria-live="polite">
-      <div class="tb-top"><span class="tb-step"></span><button class="tb-skip" type="button">Skip tour ${icon('x')}</button></div>
+      <div class="tb-top"><span class="tb-step"></span><button class="tb-skip" type="button">${t('Skip tour')} ${icon('x')}</button></div>
       <h3 class="tb-title"></h3>
       <p class="tb-text"></p>
       <div class="tb-actions">
         <div class="tb-dots">${steps.map(() => '<i></i>').join('')}</div>
-        <button class="tb-back" type="button">${icon('back')} Back</button>
-        <button class="tb-next" type="button">Next ${icon('next')}</button>
+        <button class="tb-back" type="button">${icon('back')} ${t('Back')}</button>
+        <button class="tb-next" type="button">${t('Next')} ${icon('next')}</button>
       </div>
     </div>`;
   document.body.appendChild(root);
@@ -156,7 +158,7 @@ export function startTour(steps, { onClose } = {}) {
   function speak(text) {
     talkCall?.kill();
     mascot.talk(true);
-    const spoken = audio.say(text, { rate: 1.0, pitch: 1.35, onend: () => { if (!closed) mascot.talk(false); } });
+    const spoken = readAloud() && audio.say(text, { onend: () => { if (!closed) mascot.talk(false); } });
     // without a voice, move the mouth for about as long as it takes to read the line
     if (!spoken) talkCall = gsap.delayedCall(Math.min(5, 0.5 + text.split(' ').length * 0.2), () => mascot.talk(false));
   }
@@ -186,9 +188,9 @@ export function startTour(steps, { onClose } = {}) {
     $('.tb-step').textContent = `${i + 1} / ${steps.length}`;
     root.querySelectorAll('.tb-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
     $('.tb-back').style.visibility = i === 0 ? 'hidden' : 'visible';
-    $('.tb-next').innerHTML = i === steps.length - 1 ? `${st.cta || "Let's go"} ${icon('next')}` : `Next ${icon('next')}`;
-    $('.tb-title').textContent = st.title;
-    const ws = words($('.tb-text'), st.text);
+    $('.tb-next').innerHTML = i === steps.length - 1 ? `${t(st.cta || "Let's go")} ${icon('next')}` : `${t('Next')} ${icon('next')}`;
+    $('.tb-title').textContent = t(st.title);
+    const ws = words($('.tb-text'), t(st.text));
     const L = layout(r);
 
     // spotlight moves to the target (or closes to nothing)
@@ -217,7 +219,7 @@ export function startTour(steps, { onClose } = {}) {
     gsap.fromTo($('.tb-title'), { opacity: 0, x: -14, filter: 'blur(6px)' }, { opacity: 1, x: 0, filter: 'blur(0px)', duration: 0.4, ease: 'power3.out', delay: 0.08 });
     gsap.fromTo(ws, { opacity: 0, x: -10, filter: 'blur(5px)' }, { opacity: 1, x: 0, filter: 'blur(0px)', duration: 0.32, ease: 'power2.out', stagger: 0.04, delay: 0.16 });
     drawArrow(r, L.bx, L.by, L.bw, bubble.offsetHeight);
-    speak(`${st.title}. ${st.text}`);
+    speak(`${t(st.title)}. ${t(st.text)}`);
     $('.tb-next').focus({ preventScroll: true });
     busy = false;
   }
@@ -248,7 +250,7 @@ export function startTour(steps, { onClose } = {}) {
     mascot.talk(false);
     gsap.to([bubble, arrow], { opacity: 0, duration: 0.2 });
     gsap.to(spot, { opacity: 0, duration: 0.3 });
-    if (finished) audio.say("Have fun, scientist!", { pitch: 1.35 });
+    if (finished && readAloud()) audio.say('Have fun, scientist!');
     await mascot.leave();
     await gsap.to($('.tour-dim'), { opacity: 0, duration: 0.3 });
     mascot.destroy();

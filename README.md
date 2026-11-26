@@ -17,8 +17,43 @@
 - Questions and options are shuffled every time. Each game offers a **Quick round (10)** or a **Full game**.
 - Stars per game: at least 90% right first time gives ★★★, 70% gives ★★, 40% gives ★. Best scores are saved in the browser.
 - Every 3D model follows the cursor or finger. Drag to spin it, tap to "poke" it, and scroll to zoom in the Lab.
-- Music, sound effects and voice are all generated in the browser, so there are no audio files and they work offline. Each has an on/off button, and there is a full-screen button for the board.
+- Music and sound effects are generated in the browser, so there are no audio files and they work offline. The device voice also works offline. Each has an on/off button, and there is a full-screen button for the board.
 - Direct links for teachers: `/#elements`, `/#latin`, `/#ions`, `/#cross`, `/#laws`, `/#lab`
+
+## Two ways to play (Element Quiz, Ions, Laws & Masses)
+- **Play while you learn:** instant feedback. After every answer, each choice (A, B, C, D) is explained in text and read aloud one by one, with the line being read highlighted. A wrong answer still has to be corrected by tapping the right one, with no points.
+- **Test your knowledge:** one pick per question, no hints and no right/wrong shown. At the end a review screen lists every question with the student's answer, the correct answer and an explanation of every choice, right and wrong. **Listen to all explanations** reads the whole review aloud, card by card.
+- Latin Names and Criss-Cross always play in learn mode, with every step narrated.
+
+## Learning with audio
+- Every game has **Listen: how to play** and **Learn the topic first**: a short narrated lesson (5–6 slides) on the topic before playing.
+- Questions and answer choices are read aloud, with a replay button on each question. Symbols are spelled out with capital and small letters (so "Mn" is not heard as "Mg").
+- Ravi's tour, the home belt, the Element Lab and every feedback message are spoken too. Reading aloud and speed can be changed in **Settings** (gear button).
+
+## Telugu (తెలుగు)
+- The **EN / తె** button in the top bar switches every screen, question, explanation and lesson between English and Telugu. The choice is remembered.
+- Built-in Telugu text is in `src/i18n/te.json` (691 lines, keyed by the English text). It uses the AP SCERT Class IX terms (మూలకం, పరమాణు సంఖ్య, సంయోజకత, అయాను…). Chemical symbols and formulas stay as they are. **It was machine-written, so a Telugu-medium teacher should read through it.** Corrections go straight into that file.
+- Optionally, Settings → Bhashini → *Bhashini machine translation* swaps the built-in text for Bhashini translations (cached in the browser).
+
+## Voices: device, ElevenLabs, Bhashini
+| Engine | English | Telugu | Needs |
+|---|---|---|---|
+| Device voice | ✓ | only if the device has a Telugu voice (most Windows PCs do not) | nothing |
+| ElevenLabs | ✓ | ✓ with `eleven_v3` / `eleven_v4` / `eleven_v4_turbo` models | API key |
+| Bhashini (MeitY) | – | ✓ | ULCA user ID + API key from bhashini.gov.in |
+
+**Auto** (the default) uses Bhashini, then ElevenLabs, then the device voice for Telugu, and ElevenLabs (if set up) or the device voice for English. Clips are cached in the browser so each line is downloaded once.
+
+Keys can be entered in **Settings** (kept only in that browser), or set once on the server so students never see them:
+
+```
+ELEVENLABS_API_KEY=...
+BHASHINI_USER_ID=...
+BHASHINI_API_KEY=...
+BHASHINI_PIPELINE_ID=64392f96daac500b55c543cd   # optional
+```
+
+Put them in Vercel → Project → Settings → Environment Variables (and redeploy), or in `.env.local` for `npm run dev` (see `.env.example`). The serverless functions in `api/` (`eleven.js`, `bhashini.js`, `status.js`) call ElevenLabs and Bhashini, so keys never reach the page; in dev, Vite runs the same functions.
 
 ## Run locally
 ```bash
@@ -47,17 +82,23 @@ Ravi is drawn entirely in SVG code (`src/tour/ravi.js`) as a jointed puppet: hip
 ## Tech
 - Vite + plain JavaScript for the games, and [Three.js](https://threejs.org) for all 3D: one WebGL canvas draws the space background and every 3D stage.
 - React 19 + TypeScript + Tailwind CSS v4 with the shadcn/ui structure (`components.json`, `src/components/ui`, `src/lib/utils.ts`, theme tokens in `src/index.css`) for the home belt. React only loads on the home page.
-- Icons are [Lucide](https://lucide.dev). The fonts are Geist and Geist Mono.
+- Icons are [Lucide](https://lucide.dev). The fonts are Geist, Geist Mono and Noto Sans Telugu.
 
 ```
 src/
   components/ui/   sushi-conveyor-menu.tsx (shadcn-style component)
   home/            Home.tsx (games on the belt)
-  data/            elements.js (1–30), questions.js (all 100 questions)
+  data/            elements.js (1–30), questions.js (all 100 questions),
+                   notes.js (why each answer choice is right or wrong), lessons.js (topic lessons, how to play)
+  i18n/            te.json (Telugu text)
   three/           engine.js, models.js, plates.js, textures.js
   games/           quiz.js (Games 1, 3, 5), latin.js, cross.js, lab.js, session.js
   index.css        Tailwind + shadcn theme (light and dark)
   style.css        styles for the game screens
   theme.js         light / dark toggle
+  i18n.js          English / Telugu switch, t()
+  speech.js        device, ElevenLabs and Bhashini voices; narrate.js reads lines aloud
+  settings.js, settingsPanel.js   voice, keys and language settings
   audio.js, fx.js, main.js
+api/               eleven.js, bhashini.js, status.js (Vercel serverless functions)
 ```

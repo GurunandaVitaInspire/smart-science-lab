@@ -13,16 +13,27 @@ export interface HomeGame {
   details: string[];
 }
 
+/** Every visible word on the belt, already in the chosen language. */
+export interface HomeStrings {
+  eyebrow: string;
+  heading: string;
+  caption: string;
+  start: string;
+  lab: string;
+  legend: { [tier: number]: string };
+  labels: { add: string; close: string; previous: string; next: string; pause: string };
+}
+
 export interface HomeProps {
   games: HomeGame[];
   images: Record<string, string>;
+  strings: HomeStrings;
   onPlay: (id: string) => void;
+  /** Called when a plate is opened, so its description can be read aloud. */
+  onPeek?: (item: ConveyorDish) => void;
 }
 
-/** Difficulty is shown as the plate ring colour, like price colours on a sushi belt. */
-export const LEGEND = { 1: "Explore", 2: "Warm-up", 3: "Practice", 4: "Tricky", 5: "Challenge" };
-
-function Home({ games, images, onPlay }: HomeProps) {
+function Home({ games, images, strings, onPlay, onPeek }: HomeProps) {
   const pending = React.useRef<string | null>(null);
   const items: ConveyorDish[] = games.map((g) => ({
     id: g.id,
@@ -38,16 +49,17 @@ function Home({ games, images, onPlay }: HomeProps) {
     <SushiConveyorMenu
       className="bg-transparent!"
       items={items}
-      legend={LEGEND}
-      eyebrow="Class IX · Atoms & Molecules"
-      heading="Every chemistry game comes round on the belt."
-      caption="Hover to stop the belt, flick it to spin, pick a plate to play."
+      legend={strings.legend}
+      eyebrow={strings.eyebrow}
+      heading={strings.heading}
+      caption={strings.caption}
       autoplay
       interval={3400}
-      labels={{ add: "Play", close: "Close", previous: "Previous game", next: "Next game", pause: "Pause belt" }}
+      labels={strings.labels}
       onAdd={(item) => { pending.current = item.id; }}
       onOpenChange={(index) => {
-        if (index === null && pending.current) {
+        if (index !== null) { onPeek?.(items[index]); return; }
+        if (pending.current) {
           const id = pending.current;
           pending.current = null;
           onPlay(id);
@@ -57,11 +69,11 @@ function Home({ games, images, onPlay }: HomeProps) {
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button type="button" data-tour="start" onClick={() => onPlay("elements")} className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background shadow-sm outline-none transition-[translate,box-shadow] hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <Play className="size-4" aria-hidden="true" />
-            Start with elements
+            {strings.start}
           </button>
           <button type="button" data-tour="lab" onClick={() => onPlay("lab")} className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground shadow-sm outline-none backdrop-blur transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
             <Microscope className="size-4" aria-hidden="true" />
-            Element Lab
+            {strings.lab}
           </button>
         </div>
       }

@@ -7,17 +7,19 @@ import { banner, rain, burst, centerOf } from '../fx.js';
 import { Stage } from '../three/engine.js';
 import { sampleModel } from '../three/models.js';
 import { lookFor } from '../data/elements.js';
+import { t } from '../i18n.js';
+import { narrate, hush, sayOption } from '../narrate.js';
 
 export function mountLatin(body, { boards, session, onDone }) {
   const root = h(`<div class="latin">
     <div class="stage-wrap">
       <div class="stage"></div>
       <div class="holo-card latin-card"></div>
-      <div class="stage-hint">Drag to spin · tap to poke</div>
+      <div class="stage-hint">${t('Drag to spin · tap to poke')}</div>
     </div>
     <div class="lpanel glass">
       <div class="qmeta"><span class="kind-chip"></span><span class="qnum"></span></div>
-      <h2 class="qtext">Drag each Latin name to its element</h2>
+      <h2 class="qtext">${t('Drag each Latin name to its element')}</h2>
       <div class="lrows"></div>
       <div class="ltray"></div>
       <div class="feedback" hidden></div>
@@ -31,9 +33,9 @@ export function mountLatin(body, { boards, session, onDone }) {
   function show(p, matched) {
     if (shownSym !== p.sym) { stage.set(sampleModel(p.sym)); shownSym = p.sym; }
     const c = $('.latin-card');
-    c.innerHTML = `<div class="tile"><span class="sym">${p.sym}</span><span class="nm">${p.el}</span></div>
-      <div class="info"><div class="cat">${matched ? 'Latin name' : 'Element'}</div><div class="shells">${matched ? `<b>${p.latin}</b> → symbol <b>${p.sym}</b>` : `${p.icon} ${p.el}`}</div>
-      <div class="fact">${matched ? `The symbol ${p.sym} comes from the Latin word <b>${p.latin}</b>.` : 'Which Latin name belongs to it?'}</div></div>`;
+    c.innerHTML = `<div class="tile"><span class="sym">${p.sym}</span><span class="nm">${t(p.el)}</span></div>
+      <div class="info"><div class="cat">${matched ? t('Latin name') : t('Element')}</div><div class="shells">${matched ? `<b>${p.latin}</b> → ${t('symbol')} <b>${p.sym}</b>` : `${p.icon} ${t(p.el)}`}</div>
+      <div class="fact">${matched ? t('The symbol {sym} comes from the Latin word {latin}.', { sym: p.sym, latin: `<b>${p.latin}</b>` }) : t('Which Latin name belongs to it?')}</div></div>`;
     c.style.setProperty('--c', lookFor(p.sym).color);
   }
 
@@ -43,12 +45,13 @@ export function mountLatin(body, { boards, session, onDone }) {
     if (bi >= boards.length) { onDone(); return; }
     B = boards[bi]; placed = 0; sel = null; missed = new Set();
     audio.whoosh();
-    $('.kind-chip').textContent = B.name;
-    $('.qnum').textContent = `Board ${bi + 1} of ${boards.length}`;
+    $('.kind-chip').textContent = t(B.name);
+    $('.qnum').textContent = t('Board {n} of {total}', { n: bi + 1, total: boards.length });
+    narrate(`${t(B.name)}. ${t('Drag each Latin name to its element.')} ${B.pairs.map(p => t(p.el)).join(', ')}.`);
     $('.feedback').hidden = true;
     $('.lrows').innerHTML = B.pairs.map((p, i) => `<div class="lrow tilt" data-tilt-max="6" data-i="${i}">
-        <span class="licon">${p.icon}</span><span class="lname">${p.el}</span>
-        <button class="drop" data-i="${i}" aria-label="Box for ${p.el}"><span>Drop here</span></button></div>`).join('');
+        <span class="licon">${p.icon}</span><span class="lname">${t(p.el)}</span>
+        <button class="drop" data-i="${i}" aria-label="${t(p.el)}"><span>${t('Drop here')}</span></button></div>`).join('');
     $('.ltray').innerHTML = shuffle(B.pairs.map((_, i) => i)).map(i => `<button class="chip" data-i="${i}"><b>${B.pairs[i].latin}</b> <small>(${B.pairs[i].sym})</small></button>`).join('');
     show(B.pairs[0], false);
     wire();
@@ -63,7 +66,8 @@ export function mountLatin(body, { boards, session, onDone }) {
     if (sel === chip) { chip.classList.remove('sel'); sel = null; return; }
     sel?.classList.remove('sel'); sel = chip; chip.classList.add('sel');
     const p = B.pairs[+chip.dataset.i];
-    say('', `Now tap the element box for <b>${p.latin}</b>.`);
+    say('', t('Now tap the element box for {latin}.', { latin: `<b>${p.latin}</b>` }));
+    narrate(`${p.latin}. ${t('Now tap the element box for {latin}.', { latin: p.latin })}`);
   }
 
   function place(chip, box) {
@@ -77,8 +81,11 @@ export function mountLatin(body, { boards, session, onDone }) {
       if (sel === chip) sel = null;
       placed++;
       audio.pop();
-      if (missed.has(i)) { session.learned(box); say('learn', `${icon('sparkles')} Yes. <b>${p.el}</b> → <b>${p.latin} (${p.sym})</b>. No points for this one, but now you know it.`); }
-      else { const pts = session.correct(box, { small: true }); say('good', `${icon('check')} <b>${p.el}</b> → <b>${p.latin} (${p.sym})</b> <span class="pts">+${pts}</span>`); }
+      const fact = t('{el} is {latin} in Latin, so its symbol is {sym}.', { el: t(p.el), latin: p.latin, sym: p.sym });
+      if (missed.has(i)) { session.learned(box, { quiet: true }); say('learn', `${icon('sparkles')} ${t('Yes.')} <b>${t(p.el)}</b> → <b>${p.latin} (${p.sym})</b>. ${t('No points for this one, but now you know it.')}`); }
+      else { const pts = session.correct(box, { small: true, quiet: true }); say('good', `${icon('check')} <b>${t(p.el)}</b> → <b>${p.latin} (${p.sym})</b> <span class="pts">+${pts}</span>`); }
+      narrate(t('{el} is {latin} in Latin, so its symbol is {sym}.', { el: t(p.el), latin: p.latin, sym: sayOption(p.sym) }));
+      void fact;
       session.step();
       holdUntil = performance.now() + 2500;
       show(p, true);
@@ -88,10 +95,11 @@ export function mountLatin(body, { boards, session, onDone }) {
       box.classList.add('bad'); setTimeout(() => box.classList.remove('bad'), 450);
       const right = root.querySelector(`.drop[data-i="${i}"]`);
       right.classList.add('reveal');
-      if (!missed.has(i)) { missed.add(i); session.wrong(box, { line: `Oops! ${p.latin} belongs to ${p.el}. Look at the glowing box!` }); }
+      if (!missed.has(i)) { missed.add(i); session.wrong(box, { quiet: true }); }
       else audio.wrong();
       holdUntil = performance.now() + 2500;
-      say('bad', `${icon('x')} Not that one. <b>${p.latin} (${p.sym})</b> belongs to <b>${p.el}</b>. See the glowing box? Drag it there.`);
+      say('bad', `${icon('x')} ${t('Not that one. {latin} belongs to {el}. See the glowing box? Drag it there.', { latin: `<b>${p.latin} (${p.sym})</b>`, el: `<b>${t(p.el)}</b>` })}`);
+      narrate(t('Not that one. {latin} belongs to {el}. See the glowing box? Drag it there.', { latin: p.latin, el: t(p.el) }));
       show(p, false);
     }
   }
@@ -102,11 +110,12 @@ export function mountLatin(body, { boards, session, onDone }) {
   }
 
   function finishBoard() {
-    banner('Board complete', `${B.pairs.length - missed.size} of ${B.pairs.length} first time`);
+    banner(t('Board complete'), t('{a} of {b} first time', { a: B.pairs.length - missed.size, b: B.pairs.length }));
+    narrate(`${t('Board complete')}! ${t('All {n} matched. Glitter stars for you!', { n: B.pairs.length })}`);
     rain(160);
     audio.streak();
     const fb = $('.feedback'); fb.hidden = false; fb.className = 'feedback good';
-    fb.innerHTML = `<div class="fb-text"><div class="fb-head">${icon('sparkles')} All ${B.pairs.length} matched. Glitter stars for you!</div></div><button class="next-btn">${bi + 1 >= boards.length ? 'Finish' : 'Next board'} ${icon('next')}</button>`;
+    fb.innerHTML = `<div class="fb-text"><div class="fb-head">${icon('sparkles')} ${t('All {n} matched. Glitter stars for you!', { n: B.pairs.length })}</div></div><button class="next-btn">${bi + 1 >= boards.length ? t('Finish') : t('Next board')} ${icon('next')}</button>`;
     nextCtl = autoNext(fb.querySelector('.next-btn'), 4200, load);
   }
 
@@ -137,14 +146,20 @@ export function mountLatin(body, { boards, session, onDone }) {
     root.querySelectorAll('.drop').forEach(d => d.addEventListener('click', () => {
       if (d.disabled) return;
       if (sel) place(sel, d);
-      else { say('', 'Pick a Latin name chip first (drag it, or tap it and then tap a box).'); }
+      else { say('', t('Pick a Latin name chip first (drag it, or tap it and then tap a box).')); narrate(t('Pick a Latin name chip first (drag it, or tap it and then tap a box).')); }
     }));
     root.querySelectorAll('.lrow').forEach(r => r.addEventListener('pointerenter', () => {
       if (r.classList.contains('done') || dragging || performance.now() < holdUntil) return;
       show(B.pairs[+r.dataset.i], false);
     }));
+    root.querySelectorAll('.lrow').forEach(r => r.addEventListener('click', e => {
+      if (e.target.closest('.drop') || sel) return;
+      const p = B.pairs[+r.dataset.i];
+      show(p, r.classList.contains('done'));
+      narrate(r.classList.contains('done') ? t('{el} is {latin} in Latin, so its symbol is {sym}.', { el: t(p.el), latin: p.latin, sym: sayOption(p.sym) }) : `${t(p.el)}. ${t('Which Latin name belongs to it?')}`);
+    }));
   }
 
   load();
-  return { destroy() { nextCtl?.cancel(); stage.dispose(); } };
+  return { destroy() { nextCtl?.cancel(); hush(); stage.dispose(); } };
 }

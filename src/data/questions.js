@@ -4,10 +4,10 @@
 // stage: what the 3D stage shows. keep: keep the option order (True/False, Cation/Anion).
 
 /* ---------- Game 1 · Element Quiz (1 to 30) ---------- */
-const WH = (z, a, t, w) => ({ z, kind: 'Name', q: `Element with atomic number ${z} is`, a, t, w });
-const SYM = (z, name, a, t, w) => ({ z, kind: 'Symbol', q: `Symbol of ${name}`, a, t, w });
-const ZN = (z, s, t, w) => ({ z, kind: 'Atomic no.', q: `Atomic number of ${s}`, a: String(z), t: t.map(String), w });
-const IS = (z, s, a, t, w) => ({ z, kind: 'Name', q: `${s} is the symbol of`, a, t, w });
+const WH = (z, a, t, w) => ({ z, kind: 'Name', q: `Element with atomic number ${z} is`, tpl: 'Element with atomic number {z} is', vars: { z }, a, t, w });
+const SYM = (z, name, a, t, w) => ({ z, kind: 'Symbol', q: `Symbol of ${name}`, tpl: 'Symbol of {name}', vars: { name }, a, t, w });
+const ZN = (z, s, t, w) => ({ z, kind: 'Atomic no.', q: `Atomic number of ${s}`, tpl: 'Atomic number of {name}', vars: { name: s }, a: String(z), t: t.map(String), w });
+const IS = (z, s, a, t, w) => ({ z, kind: 'Name', q: `${s} is the symbol of`, tpl: '{name} is the symbol of', vars: { name: s }, a, t, w });
 
 export const GAME1 = [
   WH(1, 'Hydrogen', ['Helium', 'Lithium', 'Oxygen'], 'Hydrogen (H) is the first and lightest element.'),
@@ -40,7 +40,7 @@ export const GAME1 = [
   ZN(28, 'Ni', [27, 29, 30], 'Nickel (Ni) is element 28.'),
   IS(29, 'Cu', 'Copper', ['Calcium', 'Cobalt', 'Chromium'], 'Cu is copper, from the Latin cuprum.'),
   SYM(30, 'Zinc', 'Zn', ['ZN', 'zn', 'Z'], 'Zinc is Zn, element 30.'),
-].map(x => ({ ...x, stage: { type: 'element', z: x.z } }));
+].map((x, i) => ({ ...x, id: `e${i + 1}`, stage: { type: 'element', z: x.z } }));
 
 /* ---------- Game 2 · Latin Names (2 boards of 5) ---------- */
 export const LATIN_BOARDS = [
@@ -90,7 +90,7 @@ export const GAME3 = [
   I('Formula', 'Formula of ammonium ion', 'NH4^+', ['NH3', 'NH4^−', 'N^3−'], 'The ammonium ion is NH4^+. NH3 is ammonia gas.', { ion: 'NH4', hide: true }),
   I('Valency', 'Valency of NO3^− (careful: 3 oxygens!)', '1', ['2', '3', '4'], 'Look at the charge, not the 3 oxygens. NO3^− has charge 1−, so valency 1.', { ion: 'NO3' }),
   I('Type', 'Which ion has valency 2?', 'CO3^2−', ['OH^−', 'NO3^−', 'Al^3+'], 'Carbonate CO3^2− has charge 2−, so its valency is 2.', { ion: 'CO3', mystery: true }),
-];
+].map((x, i) => ({ ...x, id: `i${i + 1}` }));
 
 /* ---------- Game 4 · Criss-Cross ---------- */
 export const IONS = {
@@ -144,7 +144,7 @@ export const GAME5 = [
   { kind: 'Mol. mass', key: 17, unit: 'u', q: 'Molecular mass of NH3 (N = 14, H = 1)', w: '14 + 3 × 1 = 17 u.', stage: { type: 'molecule', mol: 'NH3', labels: true } },
   { kind: 'Mol. mass', key: 98, unit: 'u', q: 'Molecular mass of H2SO4 (H = 1, S = 32, O = 16)', w: '2 × 1 + 32 + 4 × 16 = 98 u.', stage: { type: 'molecule', mol: 'H2SO4', labels: true } },
   { kind: 'Mol. mass', key: 58.5, unit: 'u', q: 'Formula unit mass of NaCl (Na = 23, Cl = 35.5)', w: '23 + 35.5 = 58.5 u.', stage: { type: 'molecule', mol: 'NaCl', labels: true } },
-];
+].map((x, i) => ({ ...x, id: `l${i + 1}` }));
 
 export const GAMES = [
   { id: 'elements', num: 1, title: 'Element Quiz', sub: 'Names, symbols and atomic numbers of elements 1 to 30.', icon: 'atom', tier: 2, color: '#38bdf8', count: GAME1.length, unit: 'questions', details: ['30 elements', 'Capital / small letter traps', 'Atom reveal in 3D'] },

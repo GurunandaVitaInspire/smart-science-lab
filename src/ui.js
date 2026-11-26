@@ -2,6 +2,7 @@
 import { audio } from './audio.js';
 import { icon } from './icons.js';
 import { toggleTheme } from './theme.js';
+import { t, getLang, setLang } from './i18n.js';
 
 /** Formula text to HTML: "SO4^2−" -> SO<sub>4</sub><sup>2−</sup> */
 export function F(s) {
@@ -49,10 +50,12 @@ export function initTilt() {
 /** Header buttons: theme, music, effects, voice, full screen. */
 export function soundButtons() {
   const el = h(`<div class="sound-btns">
+    <button class="icon-btn lang-btn" data-s="lang" title="${t('Language')}" aria-label="${t('Language')}"><span class="lang-label">${getLang() === 'te' ? 'EN' : 'తె'}</span></button>
     <button class="icon-btn" data-s="theme" title="Light / dark" aria-label="Switch light or dark theme"><span class="i-dark">${icon('sun')}</span><span class="i-light">${icon('moon')}</span></button>
     <button class="icon-btn" data-s="music" title="Music on / off" aria-label="Music">${icon('music')}</button>
     <button class="icon-btn" data-s="sfx" title="Sound effects on / off" aria-label="Sound effects">${icon('volume')}</button>
     <button class="icon-btn" data-s="voice" title="Voice cheers on / off" aria-label="Voice cheers">${icon('mic')}</button>
+    <button class="icon-btn" data-s="settings" title="${t('Settings')}" aria-label="${t('Settings')}">${icon('settings')}</button>
     <button class="icon-btn hide-sm" data-s="full" title="Full screen" aria-label="Full screen">${icon('maximize')}</button>
   </div>`);
   const sync = () => {
@@ -68,6 +71,8 @@ export function soundButtons() {
     else if (s === 'voice') audio.toggleVoice();
     else if (s === 'full') toggleFull();
     else if (s === 'theme') toggleTheme();
+    else if (s === 'lang') { setLang(getLang() === 'te' ? 'en' : 'te'); return; }
+    else if (s === 'settings') { document.dispatchEvent(new Event('opensettings')); return; }
     audio.tap();
     document.querySelectorAll('.sound-btns').forEach(x => x.dispatchEvent(new Event('sync')));
   });
@@ -102,4 +107,13 @@ export function autoNext(btn, ms, fn) {
 
 export function stars(n, max = 3) {
   return Array.from({ length: max }, (_, i) => `<span class="star ${i < n ? 'on' : ''}" style="--i:${i}">${icon('star')}</span>`).join('');
+}
+
+/** A short message at the bottom of the screen. */
+export function toast(msg, ms = 5000) {
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const el = h(`<div class="toast" role="status">${msg}</div>`);
+  document.body.appendChild(el);
+  setTimeout(() => el.classList.add('out'), ms);
+  setTimeout(() => el.remove(), ms + 400);
 }
